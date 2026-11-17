@@ -1,6 +1,6 @@
 <?php
 $host = 'localhost';
-$port = '3307'; 
+$port = '3307';
 $dbname = 'conecta_corrente';
 $username = 'root';
 $password = '';

@@ -1,5 +1,6 @@
 <?php
 require_once 'conexao.php';
+require_once 'image_helpers.php';
 
 $id = $_GET['id'] ?? null;
 
@@ -17,27 +18,14 @@ if (!$estabelecimento) {
     exit;
 }
 
-// Processa fotos da galeria (cardápios / ambiente)
-$galeria = [];
-if (!empty($estabelecimento['imagem_url'])) {
-    $galeria[] = $estabelecimento['imagem_url'];
-}
-if (!empty($estabelecimento['galeria_fotos'])) {
-    $extras = explode(',', $estabelecimento['galeria_fotos']);
-    foreach ($extras as $img) {
-        $img = trim($img);
-        if (!empty($img) && !in_array($img, $galeria)) {
-            $galeria[] = $img;
-        }
-    }
-}
+$galeria = galleryImagesFromStorage($estabelecimento['imagem_url'], $estabelecimento['galeria_fotos']);
 
 // Processa envio de avaliação
 $mensagem_aviso = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enviar_avaliacao'])) {
-    $nome_usuario = trim($_POST['nome_usuario']);
-    $nota = intval($_POST['nota']);
-    $comentario = trim($_POST['comentario']);
+    $nome_usuario = trim($_POST['nome_usuario'] ?? '');
+    $nota = (int) ($_POST['nota'] ?? 0);
+    $comentario = trim($_POST['comentario'] ?? '');
 
     if (!empty($nome_usuario) && $nota >= 1 && $nota <= 5) {
         $stmt_av = $pdo->prepare("INSERT INTO avaliacoes (estabelecimento_id, nome_usuario, nota, comentario) VALUES (?, ?, ?, ?)");
@@ -66,100 +54,116 @@ if ($total_notas > 0) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><?= htmlspecialchars($estabelecimento['nome']) ?> — Conecta Corrente</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .hide-scrollbar { scrollbar-width: none; }
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-  </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
-  <div class="mx-auto min-h-screen max-w-[430px] bg-white shadow-lg relative pb-16">
-    
-    <!-- Botão Voltar -->
-    <div class="p-4 bg-white sticky top-0 z-30 flex items-center justify-between border-b border-gray-100">
-      <a href="index.php" class="w-9 h-9 rounded-full bg-gray-100 text-gray-800 flex items-center justify-center font-bold text-sm">←</a>
-      <span class="text-xs font-bold text-green-700 bg-green-50 px-3 py-1 rounded-full"><?= htmlspecialchars($estabelecimento['categoria']) ?></span>
-    </div>
-
-    <!-- Carrossel de Fotos & Cardápios (Inspirado na aba de Fotos do Google Maps) -->
-    <section class="mt-2">
-      <div class="px-5 mb-2 flex justify-between items-center">
-        <h2 class="font-extrabold text-sm text-gray-700 uppercase">📷 Fotos & Cardápios (<?= count($galeria) ?>)</h2>
-        <span class="text-[10px] text-gray-400">Deslize para o lado →</span>
+  <div class="mx-auto min-h-screen max-w-7xl bg-white pb-10 shadow-sm">
+    <header class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4">
+        <a href="index.php" class="inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-700" aria-label="Voltar ao guia">Voltar ao guia</a>
+        <span class="rounded-full bg-green-50 px-4 py-2 text-sm font-semibold text-green-900"><?= htmlspecialchars($estabelecimento['categoria'], ENT_QUOTES, 'UTF-8') ?></span>
       </div>
-      
-      <div class="flex gap-3 overflow-x-auto px-5 hide-scrollbar">
-        <?php foreach ($galeria as $foto): ?>
-          <a href="<?= htmlspecialchars($foto) ?>" target="_blank" class="shrink-0 w-64 h-44 rounded-2xl overflow-hidden bg-gray-100 border border-gray-100 block">
-            <img src="<?= htmlspecialchars($foto) ?>" class="w-full h-full object-cover hover:scale-105 transition" alt="Foto / Cardápio" />
-          </a>
-        <?php endforeach; ?>
-      </div>
-    </section>
+    </header>
 
-    <div class="px-5 pt-4">
-      <h1 class="text-2xl font-extrabold"><?= htmlspecialchars($estabelecimento['nome']) ?></h1>
-      <p class="text-xs text-gray-500 mt-1">📍 <?= htmlspecialchars($estabelecimento['endereco']) ?></p>
-
-      <!-- Botão do WhatsApp -->
-      <?php if (!empty($estabelecimento['whatsapp'])): ?>
-        <a href="https://wa.me/<?= htmlspecialchars($estabelecimento['whatsapp']) ?>?text=Olá!%20Encontrei%20seu%20estabelecimento%20no%20Conecta%20Corrente." target="_blank" class="mt-4 w-full h-12 rounded-xl bg-[#25D366] text-white font-extrabold flex items-center justify-center gap-2 shadow-sm text-sm">
-          💬 Conversar no WhatsApp
-        </a>
-      <?php endif; ?>
-
-      <section class="mt-6">
-        <h2 class="font-extrabold text-md">Sobre o local</h2>
-        <p class="text-xs leading-5 text-gray-600 mt-2">
-          <?= nl2br(htmlspecialchars($estabelecimento['descricao'] ?? 'Sem descrição.')) ?>
-        </p>
-
-        <?php if (!empty($estabelecimento['horario_funcionamento'])): ?>
-          <div class="mt-3 rounded-xl bg-gray-50 p-3">
-            <h3 class="font-bold text-xs">🕒 Horários</h3>
-            <p class="text-xs text-gray-500 mt-0.5"><?= htmlspecialchars($estabelecimento['horario_funcionamento']) ?></p>
+    <main class="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <section aria-labelledby="galeria-titulo">
+        <div class="mb-4 flex items-end justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-green-800">Conheça o local</p>
+            <h2 id="galeria-titulo" class="text-xl font-bold">Fotos e cardápios</h2>
           </div>
+          <span class="text-sm text-gray-600"><?= count($galeria) ?> imagens</span>
+        </div>
+        <?php if ($galeria): ?>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <?php foreach ($galeria as $indice => $foto): ?>
+              <a href="<?= htmlspecialchars($foto, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-700 <?= $indice === 0 ? 'col-span-2 row-span-2' : '' ?>">
+                <img src="<?= htmlspecialchars($foto, ENT_QUOTES, 'UTF-8') ?>" class="aspect-[4/3] h-full w-full object-cover" alt="<?= $indice === 0 ? 'Imagem principal' : 'Imagem da galeria' ?> de <?= htmlspecialchars($estabelecimento['nome'], ENT_QUOTES, 'UTF-8') ?>" loading="<?= $indice < 2 ? 'eager' : 'lazy' ?>" />
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <p class="rounded-xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600">Ainda não há imagens cadastradas para este local.</p>
         <?php endif; ?>
       </section>
 
-      <!-- Avaliações -->
-      <section class="mt-6 border-t border-gray-100 pt-5">
-        <div class="flex items-center justify-between">
-          <h2 class="font-extrabold text-md">Avaliações</h2>
-          <span class="text-xs font-bold text-yellow-600">★ <?= $media_notas ?> (<?= $total_notas ?>)</span>
-        </div>
+      <div class="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
+        <div class="space-y-6">
+          <section>
+            <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl"><?= htmlspecialchars($estabelecimento['nome'], ENT_QUOTES, 'UTF-8') ?></h1>
+            <p class="mt-3 text-base text-gray-700"><?= htmlspecialchars($estabelecimento['endereco'], ENT_QUOTES, 'UTF-8') ?></p>
+            <?php if (!empty($estabelecimento['whatsapp'])): ?>
+              <?php $whatsapp = preg_replace('/\D+/', '', $estabelecimento['whatsapp']); ?>
+              <a href="https://wa.me/<?= htmlspecialchars($whatsapp, ENT_QUOTES, 'UTF-8') ?>?text=Olá!%20Encontrei%20seu%20estabelecimento%20no%20Conecta%20Corrente." target="_blank" rel="noopener noreferrer" class="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-green-700 px-5 text-base font-bold text-white hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 sm:w-auto">Conversar pelo WhatsApp</a>
+            <?php endif; ?>
+          </section>
 
-        <?php if ($mensagem_aviso): ?>
-          <div class="mt-2 p-2.5 rounded-lg bg-green-50 text-green-800 text-xs font-semibold">
-            <?= htmlspecialchars($mensagem_aviso) ?>
-          </div>
-        <?php endif; ?>
-
-        <form method="POST" class="mt-3 rounded-xl border border-gray-100 p-3 bg-gray-50/50 space-y-2">
-          <input type="text" name="nome_usuario" required class="w-full h-9 rounded-lg border border-gray-200 px-3 text-xs outline-none bg-white" placeholder="Seu nome" />
-          <select name="nota" required class="w-full h-9 rounded-lg border border-gray-200 px-3 text-xs outline-none bg-white">
-            <option value="5">★★★★★ (5 estrelas)</option>
-            <option value="4">★★★★☆ (4 estrelas)</option>
-            <option value="3">★★★☆☆ (3 estrelas)</option>            <option value="2">★★☆☆☆ (2 estrelas)</option>
-            <option value="1">★☆☆☆☆ (1 estrela)</option>
-          </select>
-          <textarea name="comentario" rows="2" class="w-full rounded-lg border border-gray-200 p-2 text-xs outline-none bg-white resize-none" placeholder="Escreva seu comentário..."></textarea>
-          <button type="submit" name="enviar_avaliacao" class="w-full h-9 rounded-lg bg-green-700 text-white font-bold text-xs">Enviar Avaliação</button>
-        </form>
-
-        <div class="mt-4 space-y-2">
-          <?php foreach ($avaliacoes as $av): ?>
-            <div class="border-b border-gray-100 pb-2">
-              <div class="flex justify-between items-center">
-                <span class="font-bold text-xs"><?= htmlspecialchars($av['nome_usuario']) ?></span>
-                <span class="text-yellow-500 text-xs"><?= str_repeat('★', $av['nota']) ?></span>
+          <section class="rounded-xl border border-gray-200 p-5 sm:p-6">
+            <h2 class="text-xl font-bold">Sobre o local</h2>
+            <p class="mt-3 whitespace-pre-line text-base leading-7 text-gray-700"><?= htmlspecialchars($estabelecimento['descricao'] ?? 'Sem descrição cadastrada.', ENT_QUOTES, 'UTF-8') ?></p>
+            <?php if (!empty($estabelecimento['horario_funcionamento'])): ?>
+              <div class="mt-5 border-t border-gray-200 pt-4">
+                <h3 class="text-base font-bold">Horário de funcionamento</h3>
+                <p class="mt-1 text-sm text-gray-700"><?= htmlspecialchars($estabelecimento['horario_funcionamento'], ENT_QUOTES, 'UTF-8') ?></p>
               </div>
-              <p class="text-xs text-gray-600 mt-1"><?= htmlspecialchars($av['comentario']) ?></p>
-            </div>
-          <?php endforeach; ?>
+            <?php endif; ?>
+          </section>
         </div>
-      </section>
 
-    </div>
+        <section aria-labelledby="avaliacoes-titulo" class="space-y-5">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-green-800">Opinião da comunidade</p>
+              <h2 id="avaliacoes-titulo" class="text-xl font-bold">Avaliações</h2>
+            </div>
+            <p class="text-base font-bold text-amber-700" aria-label="Nota média <?= $media_notas ?> de 5"><?= $media_notas ?> / 5 <span class="text-sm font-normal text-gray-600">(<?= $total_notas ?>)</span></p>
+          </div>
+
+          <?php if ($mensagem_aviso): ?>
+            <p role="status" class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-semibold text-green-900"><?= htmlspecialchars($mensagem_aviso, ENT_QUOTES, 'UTF-8') ?></p>
+          <?php endif; ?>
+
+          <form method="POST" class="space-y-4 rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
+            <h3 class="text-base font-bold">Deixe sua avaliação</h3>
+            <div>
+              <label for="nome-usuario" class="mb-1 block text-sm font-semibold">Seu nome</label>
+              <input id="nome-usuario" type="text" name="nome_usuario" required class="min-h-12 w-full rounded-lg border border-gray-300 px-3 text-base focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100" />
+            </div>
+            <div>
+              <label for="nota" class="mb-1 block text-sm font-semibold">Sua nota</label>
+              <select id="nota" name="nota" required class="min-h-12 w-full rounded-lg border border-gray-300 bg-white px-3 text-base focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                <option value="5">5 estrelas — Excelente</option>
+                <option value="4">4 estrelas — Muito bom</option>
+                <option value="3">3 estrelas — Bom</option>
+                <option value="2">2 estrelas — Regular</option>
+                <option value="1">1 estrela — Precisa melhorar</option>
+              </select>
+            </div>
+            <div>
+              <label for="comentario" class="mb-1 block text-sm font-semibold">Comentário</label>
+              <textarea id="comentario" name="comentario" rows="4" class="w-full rounded-lg border border-gray-300 p-3 text-base focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100"></textarea>
+            </div>
+            <button type="submit" name="enviar_avaliacao" class="min-h-12 w-full rounded-lg bg-green-800 px-5 text-base font-bold text-white hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2">Enviar avaliação</button>
+          </form>
+
+          <div class="space-y-3">
+            <?php if (!$avaliacoes): ?>
+              <p class="text-sm text-gray-600">Ainda não há avaliações. Seja a primeira pessoa a avaliar.</p>
+            <?php endif; ?>
+            <?php foreach ($avaliacoes as $av): ?>
+              <article class="rounded-lg border border-gray-200 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <h3 class="font-bold text-gray-900"><?= htmlspecialchars($av['nome_usuario'], ENT_QUOTES, 'UTF-8') ?></h3>
+                  <span class="text-sm font-semibold text-amber-700" aria-label="<?= (int) $av['nota'] ?> de 5 estrelas"><?= str_repeat('★', (int) $av['nota']) ?> <span class="text-gray-700"><?= (int) $av['nota'] ?>/5</span></span>
+                </div>
+                <?php if (!empty($av['comentario'])): ?>
+                  <p class="mt-2 whitespace-pre-line text-sm leading-6 text-gray-700"><?= htmlspecialchars($av['comentario'], ENT_QUOTES, 'UTF-8') ?></p>
+                <?php endif; ?>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
 </body>
 </html>

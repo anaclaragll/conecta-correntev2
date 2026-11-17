@@ -60,136 +60,139 @@ foreach ($estabelecimentos as $est) {
     .hide-scrollbar { scrollbar-width: none; }
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     #mapa {
-      height: 260px;
+      height: 340px;
       width: 100%;
-      border-radius: 1.25rem;
+      border-radius: 1rem;
       z-index: 10;
+    }
+    @media (max-width: 640px) {
+      #mapa { height: 280px; }
     }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
-  <div class="mx-auto min-h-screen max-w-[430px] bg-white shadow-lg relative pb-28">
-    
-    <!-- Cabeçalho & Pesquisa Corrigida -->
-    <header class="px-5 pt-5 pb-3 bg-white border-b border-gray-100 sticky top-0 z-40 bg-white/95 backdrop-blur">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-wider text-green-700">Guia & Turismo</p>
-          <h1 class="text-xl font-extrabold">Conecta <span class="text-green-700">Corrente</span></h1>
+  <div class="mx-auto min-h-screen max-w-7xl bg-white pb-24 shadow-sm md:pb-10">
+    <header class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
+      <div class="mx-auto flex max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-green-800">Guia local e turismo</p>
+            <h1 class="whitespace-nowrap text-2xl font-extrabold tracking-tight text-gray-900">Conecta <span class="text-green-800">Corrente</span></h1>
+          </div>
+          <a href="login.php" class="shrink-0 rounded-lg bg-green-800 px-4 py-3 text-sm font-bold text-white hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 md:hidden">Acessar painel</a>
         </div>
-        <a href="login.php" class="bg-green-50 text-green-700 text-xs px-3 py-2 rounded-xl font-bold">+ Cadastrar</a>
+        <nav class="hidden items-center gap-6 md:flex" aria-label="Navegação principal">
+          <a href="#mapa-secao" class="whitespace-nowrap text-sm font-semibold text-gray-700 hover:text-green-800">Mapa</a>
+          <a href="#locais" class="whitespace-nowrap text-sm font-semibold text-gray-700 hover:text-green-800">Estabelecimentos</a>
+          <a href="#eventos" class="whitespace-nowrap text-sm font-semibold text-gray-700 hover:text-green-800">Eventos</a>
+          <a href="login.php" class="whitespace-nowrap rounded-lg bg-green-800 px-4 py-3 text-sm font-bold text-white hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2">Acessar painel</a>
+        </nav>
+        <form method="GET" action="index.php" class="relative w-full md:max-w-md">
+          <label for="busca" class="sr-only">Buscar estabelecimentos e serviços</label>
+          <input id="busca" type="search" name="q" value="<?= htmlspecialchars($busca, ENT_QUOTES, 'UTF-8') ?>" placeholder="Buscar estabelecimentos e serviços" class="h-12 w-full rounded-lg border border-gray-300 bg-white px-4 pr-20 text-base outline-none focus:border-green-700 focus:ring-2 focus:ring-green-100" />
+          <?php if (!empty($categoria_filtro)): ?>
+            <input type="hidden" name="cat" value="<?= htmlspecialchars($categoria_filtro, ENT_QUOTES, 'UTF-8') ?>">
+          <?php endif; ?>
+          <button type="submit" class="absolute right-1 top-1 h-10 rounded-md bg-green-800 px-4 text-sm font-bold text-white hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-700" aria-label="Buscar">Buscar</button>
+        </form>
       </div>
-
-      <!-- Formulário de Pesquisa -->
-      <form method="GET" action="index.php" class="mt-3 relative">
-        <input type="search" name="q" value="<?= htmlspecialchars($busca) ?>" placeholder="Buscar estabelecimentos, serviços..." class="w-full h-11 rounded-xl bg-gray-100 border-none pl-10 pr-10 text-xs outline-none focus:ring-2 focus:ring-green-600" />
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></span>
-        <?php if (!empty($busca)): ?>
-          <a href="index.php<?= !empty($categoria_filtro) ? '?cat=' . urlencode($categoria_filtro) : '' ?>" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold hover:text-gray-600">✕</a>
-        <?php endif; ?>
-        <?php if (!empty($categoria_filtro)): ?>
-          <input type="hidden" name="cat" value="<?= htmlspecialchars($categoria_filtro) ?>">
-        <?php endif; ?>
-      </form>
     </header>
 
-    <!-- Carrossel de Categorias -->
-    <section class="pt-3 pb-2 border-b border-gray-50">
-      <div class="flex gap-2 overflow-x-auto px-5 hide-scrollbar text-xs font-bold">
-        <a href="index.php<?= !empty($busca) ? '?q=' . urlencode($busca) : '' ?>" class="shrink-0 px-4 py-2 rounded-xl border <?= empty($categoria_filtro) ? 'bg-green-700 text-white border-green-700' : 'bg-gray-50 text-gray-600 border-gray-200' ?>">Todas</a>
-        <a href="index.php?cat=Alimentação<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 px-4 py-2 rounded-xl border <?= $categoria_filtro === 'Alimentação' ? 'bg-green-700 text-white border-green-700' : 'bg-gray-50 text-gray-600 border-gray-200' ?>"> Alimentação</a>
-        <a href="index.php?cat=Hotelaria<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 px-4 py-2 rounded-xl border <?= $categoria_filtro === 'Hotelaria' ? 'bg-green-700 text-white border-green-700' : 'bg-gray-50 text-gray-600 border-gray-200' ?>"> Hotelaria</a>
-        <a href="index.php?cat=Serviços<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 px-4 py-2 rounded-xl border <?= $categoria_filtro === 'Serviços' ? 'bg-green-700 text-white border-green-700' : 'bg-gray-50 text-gray-600 border-gray-200' ?>"> Serviços</a>
-        <a href="index.php?cat=Artesanato<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 px-4 py-2 rounded-xl border <?= $categoria_filtro === 'Artesanato' ? 'bg-green-700 text-white border-green-700' : 'bg-gray-50 text-gray-600 border-gray-200' ?>"> Artesanato</a>
-        <a href="index.php?cat=Ecoturismo<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 px-4 py-2 rounded-xl border <?= $categoria_filtro === 'Ecoturismo' ? 'bg-green-700 text-white border-green-700' : 'bg-gray-50 text-gray-600 border-gray-200' ?>"> Ecoturismo</a>
+    <nav class="border-b border-gray-200 bg-white" aria-label="Filtrar por categoria">
+      <div class="hide-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-3 text-sm font-semibold sm:px-6 lg:px-8">
+        <a href="index.php<?= !empty($busca) ? '?q=' . urlencode($busca) : '' ?>" class="shrink-0 rounded-full border px-4 py-2.5 <?= empty($categoria_filtro) ? 'border-green-800 bg-green-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-green-700' ?>">Todas</a>
+        <a href="index.php?cat=Alimentação<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 rounded-full border px-4 py-2.5 <?= $categoria_filtro === 'Alimentação' ? 'border-green-800 bg-green-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-green-700' ?>">Alimentação</a>
+        <a href="index.php?cat=Hotelaria<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 rounded-full border px-4 py-2.5 <?= $categoria_filtro === 'Hotelaria' ? 'border-green-800 bg-green-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-green-700' ?>">Hotelaria</a>
+        <a href="index.php?cat=Serviços<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 rounded-full border px-4 py-2.5 <?= $categoria_filtro === 'Serviços' ? 'border-green-800 bg-green-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-green-700' ?>">Serviços</a>
+        <a href="index.php?cat=Artesanato<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 rounded-full border px-4 py-2.5 <?= $categoria_filtro === 'Artesanato' ? 'border-green-800 bg-green-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-green-700' ?>">Artesanato</a>
+        <a href="index.php?cat=Ecoturismo<?= !empty($busca) ? '&q=' . urlencode($busca) : '' ?>" class="shrink-0 rounded-full border px-4 py-2.5 <?= $categoria_filtro === 'Ecoturismo' ? 'border-green-800 bg-green-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-green-700' ?>">Ecoturismo</a>
       </div>
-    </section>
+    </nav>
 
-    <main class="px-5 pt-4 space-y-6">
-      
-      <!-- Seção do Mapa Interativo -->
-      <section>
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="font-extrabold text-sm text-gray-700 uppercase tracking-wider"> Mapa Comercial & Turístico</h2>
-          <span class="text-[10px] text-gray-400">Toque no card para focar</span>
-        </div>
-        <div id="mapa" class="shadow-sm border border-gray-200"></div>
-      </section>
-
-      <!-- Lista de Estabelecimentos -->
-      <section class="space-y-4">
-        <h2 class="text-lg font-extrabold">Locais encontrados (<?= count($estabelecimentos) ?>)</h2>
-
-        <?php if (empty($estabelecimentos)): ?>
-          <div class="text-center py-8 bg-gray-50 rounded-2xl">
-            <p class="text-xs text-gray-500">Nenhum local encontrado para esta busca.</p>
-            <a href="index.php" class="inline-block mt-3 text-xs font-bold bg-green-700 text-white px-3 py-2 rounded-xl">Limpar filtros</a>
-          </div>
-        <?php else: ?>
-          <?php foreach ($estabelecimentos as $est): ?>
-            <?php 
-              $lat = !empty($est['latitude']) ? floatval($est['latitude']) : -10.4431;
-              $lng = !empty($est['longitude']) ? floatval($est['longitude']) : -45.1611;
-            ?>
-            <article class="rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm hover:shadow-md transition p-3 flex gap-3 cursor-pointer" onclick="focarNoMapa(<?= $lat ?>, <?= $lng ?>, '<?= addslashes(htmlspecialchars($est['nome'])) ?>')">
-              <img class="w-24 h-24 rounded-xl object-cover bg-gray-100 shrink-0" src="<?= htmlspecialchars($est['imagem_url'] ?? 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?auto=format&fit=crop&w=300&q=80') ?>" alt="Foto" />
-              <div class="flex-1 min-w-0 flex flex-col justify-between">
-                <div>
-                  <span class="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-md inline-block"><?= htmlspecialchars($est['categoria']) ?></span>
-                  <h3 class="font-bold text-sm truncate mt-1"><?= htmlspecialchars($est['nome']) ?></h3>
-                  <p class="text-xs text-gray-500 line-clamp-1 mt-0.5"><?= htmlspecialchars($est['descricao']) ?></p>
-                </div>
-                <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                  <span class="text-[10px] text-gray-400 truncate"> <?= htmlspecialchars($est['endereco']) ?></span>
-                  <a href="detalhe.php?id=<?= $est['id'] ?>" onclick="event.stopPropagation();" class="text-[11px] font-bold text-green-700 hover:underline shrink-0">Ver mais →</a>
-                </div>
-              </div>
-            </article>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </section>
-
-      <!-- Seção de Eventos Locais -->
-      <section class="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-2xl border border-green-100">
-        <div class="flex items-center justify-between mb-3">
+    <main class="mx-auto max-w-6xl space-y-10 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <section id="mapa-secao" aria-labelledby="mapa-titulo" class="scroll-mt-40">
+        <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <span class="text-[10px] uppercase font-bold text-green-700 tracking-wider">Agenda Cultural</span>
-            <h2 class="text-md font-extrabold"> Próximos Eventos em Corrente</h2>
+            <p class="text-sm font-semibold text-green-800">Encontre no mapa</p>
+            <h2 id="mapa-titulo" class="text-xl font-bold sm:text-2xl">Mapa comercial e turístico</h2>
           </div>
+          <p class="text-sm text-gray-600">Selecione um ponto para ver os detalhes.</p>
         </div>
+        <div id="mapa" role="region" aria-label="Mapa de Corrente com estabelecimentos" class="border border-gray-300 shadow-sm"></div>
+      </section>
 
-        <?php if (empty($eventos)): ?>
-          <p class="text-xs text-gray-500">Nenhum evento agendado para os próximos dias.</p>
+      <section id="locais" aria-labelledby="locais-titulo">
+        <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p class="text-sm font-semibold text-green-800">Guia comercial</p>
+            <h2 id="locais-titulo" class="text-xl font-bold sm:text-2xl">Estabelecimentos</h2>
+          </div>
+          <span class="text-sm text-gray-600"><?= count($estabelecimentos) ?> encontrados</span>
+        </div>
+        <?php if (empty($estabelecimentos)): ?>
+          <div class="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
+            <p class="text-base text-gray-700">Nenhum local encontrado para esta busca.</p>
+            <a href="index.php" class="mt-4 inline-flex min-h-11 items-center rounded-lg bg-green-800 px-5 text-sm font-bold text-white hover:bg-green-900">Limpar filtros</a>
+          </div>
         <?php else: ?>
-          <div class="space-y-2">
-            <?php foreach ($eventos as $ev): ?>
-              <a href="evento_detalhe.php?id=<?= $ev['id'] ?>" class="bg-white p-3 rounded-xl border border-gray-100 flex gap-3 items-center hover:border-green-300 transition block">
-                <div class="w-12 h-12 rounded-lg bg-green-700 text-white flex flex-col items-center justify-center shrink-0">
-                  <span class="text-[10px] font-bold uppercase"><?= date('M', strtotime($ev['data_evento'])) ?></span>
-                  <span class="text-base font-extrabold leading-none"><?= date('d', strtotime($ev['data_evento'])) ?></span>
+          <div class="grid gap-4 md:grid-cols-2">
+            <?php foreach ($estabelecimentos as $est): ?>
+              <?php
+                $lat = !empty($est['latitude']) ? (float) $est['latitude'] : -10.4431;
+                $lng = !empty($est['longitude']) ? (float) $est['longitude'] : -45.1611;
+                $imagem = !empty($est['imagem_url']) ? $est['imagem_url'] : 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?auto=format&fit=crop&w=600&q=80';
+              ?>
+              <article class="overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:border-green-700 hover:shadow-sm">
+                <div class="flex gap-4 p-4">
+                  <img class="h-28 w-28 shrink-0 rounded-lg bg-gray-100 object-cover sm:h-32 sm:w-32" src="<?= htmlspecialchars($imagem, ENT_QUOTES, 'UTF-8') ?>" alt="Imagem principal de <?= htmlspecialchars($est['nome'], ENT_QUOTES, 'UTF-8') ?>" loading="lazy" />
+                  <div class="flex min-w-0 flex-1 flex-col">
+                    <span class="w-fit rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-900"><?= htmlspecialchars($est['categoria'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <h3 class="mt-2 text-lg font-bold leading-snug text-gray-900"><?= htmlspecialchars($est['nome'], ENT_QUOTES, 'UTF-8') ?></h3>
+                    <p class="mt-1 line-clamp-2 text-sm text-gray-600"><?= htmlspecialchars($est['descricao'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="mt-auto pt-3 text-sm text-gray-600"><?= htmlspecialchars($est['endereco'], ENT_QUOTES, 'UTF-8') ?></p>
+                  </div>
                 </div>
-                <div class="min-w-0 flex-1">
-                  <h3 class="font-bold text-xs truncate"><?= htmlspecialchars($ev['titulo']) ?></h3>
-                  <p class="text-[11px] text-gray-500 truncate"> <?= htmlspecialchars($ev['local']) ?></p>
+                <div class="flex gap-3 border-t border-gray-100 px-4 py-3">
+                  <button type="button" data-map-target="<?= (int) $est['id'] ?>" data-lat="<?= $lat ?>" data-lng="<?= $lng ?>" class="min-h-11 flex-1 rounded-lg border border-green-800 px-3 text-sm font-semibold text-green-900 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-700">Ver no mapa</button>
+                  <a href="detalhe.php?id=<?= (int) $est['id'] ?>" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-green-800 px-3 text-sm font-bold text-white hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2">Ver detalhes</a>
                 </div>
-                <span class="text-xs text-green-700 font-bold">Ver →</span>
-              </a>
+              </article>
             <?php endforeach; ?>
           </div>
         <?php endif; ?>
       </section>
 
+      <section id="eventos" aria-labelledby="eventos-titulo" class="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+        <div class="mb-4">
+          <p class="text-sm font-semibold text-green-800">Agenda cultural</p>
+          <h2 id="eventos-titulo" class="text-xl font-bold sm:text-2xl">Próximos eventos em Corrente</h2>
+        </div>
+        <?php if (empty($eventos)): ?>
+          <p class="text-sm text-gray-600">Nenhum evento agendado para os próximos dias.</p>
+        <?php else: ?>
+          <div class="grid gap-3 md:grid-cols-2">
+            <?php foreach ($eventos as $ev): ?>
+              <a href="evento_detalhe.php?id=<?= (int) $ev['id'] ?>" class="flex min-h-20 items-center gap-4 rounded-lg border border-gray-200 p-3 hover:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-700">
+                <div class="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-green-800 text-white">
+                  <span class="text-xs font-semibold uppercase"><?= date('M', strtotime($ev['data_evento'])) ?></span>
+                  <span class="text-xl font-bold leading-none"><?= date('d', strtotime($ev['data_evento'])) ?></span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <h3 class="truncate font-bold text-gray-900"><?= htmlspecialchars($ev['titulo'], ENT_QUOTES, 'UTF-8') ?></h3>
+                  <p class="mt-1 truncate text-sm text-gray-600"><?= htmlspecialchars($ev['local'], ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
+                <span aria-hidden="true" class="text-xl text-green-800">›</span>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </section>
     </main>
 
-    <!-- Navegação Fixa Inferior -->
-    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/95 backdrop-blur border-t border-gray-100 px-3 pt-2 pb-3 z-50">
-      <div class="grid grid-cols-2 gap-2">
-        <a href="index.php" class="flex flex-col items-center justify-center py-2 text-green-700 font-bold text-xs">
-          <span> Guia & Mapa</span>
-        </a>
-        <a href="login.php" class="flex flex-col items-center justify-center py-2 text-gray-400 hover:text-green-700 font-bold text-xs">
-          <span> Cadastrar / Painel</span>
-        </a>
+    <nav class="fixed bottom-0 left-0 z-50 w-full border-t border-gray-200 bg-white px-3 py-2 md:hidden" aria-label="Navegação inferior">
+      <div class="mx-auto grid max-w-md grid-cols-2 gap-2">
+        <a href="#mapa-secao" class="inline-flex min-h-12 items-center justify-center rounded-lg bg-green-50 px-3 text-sm font-bold text-green-900">Mapa e guia</a>
+        <a href="login.php" class="inline-flex min-h-12 items-center justify-center rounded-lg px-3 text-sm font-bold text-gray-700 hover:bg-gray-50">Acessar painel</a>
       </div>
     </nav>
   </div>
@@ -206,33 +209,41 @@ foreach ($estabelecimentos as $est) {
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    const pontos = <?= json_encode($pontos_mapa); ?>;
-    const markers = {};
+    const pontos = <?= json_encode($pontos_mapa, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    const markers = new Map();
 
     pontos.forEach(ponto => {
-      const popupContent = `
-        <div style="font-family: sans-serif; text-align: center;">
-          <strong style="font-size: 13px; color: #15803d;">${ponto.nome}</strong><br>
-          <span style="font-size: 10px; color: #666;">${ponto.categoria}</span><br>
-          <a href="detalhe.php?id=${ponto.id}" style="display: inline-block; margin-top: 5px; padding: 3px 8px; background: #15803d; color: white; border-radius: 6px; text-decoration: none; font-size: 10px; font-weight: bold;">Ver perfil</a>
-        </div>
-      `;
+      const popupContent = document.createElement('div');
+      popupContent.className = 'text-center';
+      const title = document.createElement('strong');
+      title.className = 'text-sm text-green-800';
+      title.textContent = ponto.nome;
+      const category = document.createElement('p');
+      category.className = 'text-xs text-gray-600';
+      category.textContent = ponto.categoria;
+      const link = document.createElement('a');
+      link.className = 'mt-2 inline-block rounded bg-green-800 px-3 py-2 text-xs font-bold text-white';
+      link.href = `detalhe.php?id=${encodeURIComponent(ponto.id)}`;
+      link.textContent = 'Ver perfil';
+      popupContent.append(title, category, link);
 
       const marker = L.marker([ponto.lat, ponto.lng])
         .addTo(map)
         .bindPopup(popupContent);
 
-      markers[`${ponto.lat}_${ponto.lng}`] = marker;
+      markers.set(String(ponto.id), marker);
     });
 
-    function focarNoMapa(lat, lng, nome) {
-      map.flyTo([lat, lng], 16, { duration: 1.2 });
-      const key = `${lat}_${lng}`;
-      if (markers[key]) {
-        markers[key].openPopup();
-      }
-      document.getElementById('mapa').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    document.querySelectorAll('[data-map-target]').forEach(button => {
+      button.addEventListener('click', () => {
+        const lat = Number(button.dataset.lat);
+        const lng = Number(button.dataset.lng);
+        map.flyTo([lat, lng], 16, { duration: 0.8 });
+        const marker = markers.get(button.dataset.mapTarget);
+        if (marker) marker.openPopup();
+        document.getElementById('mapa-secao').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
   </script>
 </body>
 </html>

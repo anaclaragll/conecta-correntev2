@@ -1,5 +1,6 @@
 <?php
 require_once 'conexao.php';
+require_once 'image_helpers.php';
 
 $id = $_GET['id'] ?? null;
 
@@ -17,20 +18,7 @@ if (!$evento) {
     exit;
 }
 
-// Galeria de Fotos do Evento
-$galeria = [];
-if (!empty($evento['imagem_url'])) {
-    $galeria[] = $evento['imagem_url'];
-}
-if (!empty($evento['galeria_fotos'])) {
-    $extras = explode(',', $evento['galeria_fotos']);
-    foreach ($extras as $img) {
-        $img = trim($img);
-        if (!empty($img) && !in_array($img, $galeria)) {
-            $galeria[] = $img;
-        }
-    }
-}
+$galeria = galleryImagesFromStorage($evento['imagem_url'], $evento['galeria_fotos']);
 
 $lat = !empty($evento['latitude']) ? floatval($evento['latitude']) : -10.4431;
 $lng = !empty($evento['longitude']) ? floatval($evento['longitude']) : -45.1611;
@@ -44,67 +32,67 @@ $lng = !empty($evento['longitude']) ? floatval($evento['longitude']) : -45.1611;
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    .hide-scrollbar { scrollbar-width: none; }
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
     #mapa-evento {
-      height: 220px;
+      height: 340px;
       width: 100%;
       border-radius: 1rem;
       z-index: 10;
     }
+    @media (max-width: 640px) {
+      #mapa-evento { height: 280px; }
+    }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
-  <div class="mx-auto min-h-screen max-w-[430px] bg-white shadow-lg relative pb-12">
-    
-    <!-- Topo -->
-    <div class="p-4 bg-white sticky top-0 z-30 flex items-center justify-between border-b border-gray-100">
-      <a href="index.php" class="w-9 h-9 rounded-full bg-gray-100 text-gray-800 flex items-center justify-center font-bold text-sm">←</a>
-      <span class="text-xs font-bold text-green-700 bg-green-50 px-3 py-1 rounded-full">🎉 Evento Local</span>
-    </div>
-
-    <!-- Galeria de Fotos do Evento -->
-    <section class="mt-2">
-      <div class="px-5 mb-2 flex justify-between items-center">
-        <h2 class="font-extrabold text-xs text-gray-700 uppercase">📷 Galeria de Fotos (<?= count($galeria) ?>)</h2>
-        <span class="text-[10px] text-gray-400">Deslize para ver →</span>
+  <div class="mx-auto min-h-screen max-w-7xl bg-white shadow-sm">
+    <header class="border-b border-gray-200 px-4 py-4 sm:px-6 lg:px-8">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4">
+        <a href="index.php" class="inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-700">Voltar ao guia</a>
+        <span class="rounded-full bg-green-50 px-4 py-2 text-sm font-semibold text-green-900">Evento local</span>
       </div>
-      
-      <div class="flex gap-3 overflow-x-auto px-5 hide-scrollbar">
-        <?php if (empty($galeria)): ?>
-          <div class="w-full h-40 rounded-2xl bg-gray-100 flex items-center justify-center text-xs text-gray-400">Sem fotos cadastradas</div>
+    </header>
+
+    <main class="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <section aria-labelledby="galeria-evento-titulo">
+        <div class="mb-4 flex items-end justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-green-800">Registros do evento</p>
+            <h2 id="galeria-evento-titulo" class="text-xl font-bold">Galeria de fotos</h2>
+          </div>
+          <span class="text-sm text-gray-600"><?= count($galeria) ?> imagens</span>
+        </div>
+        <?php if ($galeria): ?>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <?php foreach ($galeria as $indice => $foto): ?>
+              <a href="<?= htmlspecialchars($foto, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-700 <?= $indice === 0 ? 'col-span-2 row-span-2' : '' ?>">
+                <img src="<?= htmlspecialchars($foto, ENT_QUOTES, 'UTF-8') ?>" class="aspect-[4/3] h-full w-full object-cover" alt="<?= $indice === 0 ? 'Imagem principal' : 'Imagem da galeria' ?> do evento <?= htmlspecialchars($evento['titulo'], ENT_QUOTES, 'UTF-8') ?>" loading="<?= $indice < 2 ? 'eager' : 'lazy' ?>" />
+              </a>
+            <?php endforeach; ?>
+          </div>
         <?php else: ?>
-          <?php foreach ($galeria as $foto): ?>
-            <a href="<?= htmlspecialchars($foto) ?>" target="_blank" class="shrink-0 w-64 h-44 rounded-2xl overflow-hidden bg-gray-100 border border-gray-100 block">
-              <img src="<?= htmlspecialchars($foto) ?>" class="w-full h-full object-cover" alt="Foto do Evento" />
-            </a>
-          <?php endforeach; ?>
+          <p class="rounded-xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600">Ainda não há imagens cadastradas para este evento.</p>
         <?php endif; ?>
-      </div>
-    </section>
-
-    <!-- Detalhes e Descrição -->
-    <div class="px-5 pt-4 space-y-5">
-      <div>
-        <div class="text-xs font-bold text-green-700">📅 <?= date('d/m/Y', strtotime($evento['data_evento'])) ?></div>
-        <h1 class="text-2xl font-extrabold mt-1"><?= htmlspecialchars($evento['titulo']) ?></h1>
-        <p class="text-xs text-gray-500 mt-1">📍 Local: <?= htmlspecialchars($evento['local']) ?></p>
-      </div>
-
-      <section class="bg-gray-50 p-4 rounded-2xl">
-        <h2 class="font-extrabold text-sm mb-1 text-gray-800">Sobre o Evento</h2>
-        <p class="text-xs leading-5 text-gray-600">
-          <?= nl2br(htmlspecialchars($evento['descricao'] ?? 'Sem descrição detalhada cadastrada.')) ?>
-        </p>
       </section>
 
-      <!-- Mapa do Local do Evento -->
-      <section>
-        <h2 class="font-extrabold text-sm mb-2 text-gray-800">📍 Localização no Mapa</h2>
-        <div id="mapa-evento" class="border border-gray-200 shadow-sm"></div>
-      </section>
-    </div>
+      <section class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+        <div class="space-y-5">
+          <div>
+            <p class="text-sm font-semibold text-green-800"><?= date('d/m/Y', strtotime($evento['data_evento'])) ?></p>
+            <h1 class="mt-1 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl"><?= htmlspecialchars($evento['titulo'], ENT_QUOTES, 'UTF-8') ?></h1>
+            <p class="mt-3 text-base text-gray-700"><?= htmlspecialchars($evento['local'], ENT_QUOTES, 'UTF-8') ?></p>
+          </div>
+          <div class="rounded-xl border border-gray-200 p-5 sm:p-6">
+            <h2 class="text-xl font-bold">Sobre o evento</h2>
+            <p class="mt-3 whitespace-pre-line text-base leading-7 text-gray-700"><?= htmlspecialchars($evento['descricao'] ?? 'Sem descrição detalhada cadastrada.', ENT_QUOTES, 'UTF-8') ?></p>
+          </div>
+        </div>
 
+        <section aria-labelledby="mapa-evento-titulo">
+          <h2 id="mapa-evento-titulo" class="mb-3 text-xl font-bold">Localização no mapa</h2>
+          <div id="mapa-evento" role="region" aria-label="Mapa com o local do evento" class="border border-gray-300 shadow-sm"></div>
+        </section>
+      </section>
+    </main>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -119,9 +107,18 @@ $lng = !empty($evento['longitude']) ? floatval($evento['longitude']) : -45.1611;
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
+    const popup = document.createElement('div');
+    const title = document.createElement('strong');
+    const place = document.createElement('p');
+    title.className = 'text-sm text-green-800';
+    title.textContent = <?= json_encode($evento['titulo'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    place.className = 'text-xs text-gray-600';
+    place.textContent = <?= json_encode($evento['local'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    popup.append(title, place);
+
     L.marker([lat, lng])
       .addTo(map)
-      .bindPopup('<strong style="font-size:12px; color:#15803d;"><?= addslashes(htmlspecialchars($evento['titulo'])) ?></strong><br><span style="font-size:10px; color:#666;"><?= addslashes(htmlspecialchars($evento['local'])) ?></span>')
+      .bindPopup(popup)
       .openPopup();
   </script>
 </body>

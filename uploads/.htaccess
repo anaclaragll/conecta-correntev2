@@ -1,0 +1,13 @@
+Options -Indexes -ExecCGI
+
+<FilesMatch "(?i)\.(?:jpe?g|png|webp)$">
+    SetHandler default-handler
+</FilesMatch>
+
+<FilesMatch "(?i)(?:^|\.)(?:php[0-9]*|phtml|phar|pht|phtm|cgi|fcgi|pl|py|rb|sh|asp|aspx|jsp|jspx|shtml)(?:\.|$)">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>

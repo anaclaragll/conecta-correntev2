@@ -37,5 +37,8 @@ CREATE TABLE IF NOT EXISTS eventos (
     data_evento DATE NOT NULL,
     local VARCHAR(150) NOT NULL,
     imagem_url VARCHAR(500) DEFAULT NULL,
+    galeria_fotos TEXT DEFAULT NULL,
+    latitude DECIMAL(10, 8) DEFAULT -10.4431,
+    longitude DECIMAL(11, 8) DEFAULT -45.1611,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
