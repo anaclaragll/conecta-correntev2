@@ -26,7 +26,7 @@ SET @latitude_column_exists = (
 
 SET @latitude_migration = IF(
     @latitude_column_exists = 0,
-    'ALTER TABLE eventos ADD COLUMN latitude DECIMAL(10, 8) DEFAULT -10.4431',
+    'ALTER TABLE eventos ADD COLUMN latitude DECIMAL(10, 8) NULL DEFAULT NULL',
     'SELECT 1'
 );
 
@@ -44,10 +44,26 @@ SET @longitude_column_exists = (
 
 SET @longitude_migration = IF(
     @longitude_column_exists = 0,
-    'ALTER TABLE eventos ADD COLUMN longitude DECIMAL(11, 8) DEFAULT -45.1611',
+    'ALTER TABLE eventos ADD COLUMN longitude DECIMAL(11, 8) NULL DEFAULT NULL',
     'SELECT 1'
 );
 
 PREPARE longitude_migration_statement FROM @longitude_migration;
 EXECUTE longitude_migration_statement;
 DEALLOCATE PREPARE longitude_migration_statement;
+
+ALTER TABLE estabelecimentos
+    MODIFY COLUMN latitude DECIMAL(10, 8) NULL DEFAULT NULL,
+    MODIFY COLUMN longitude DECIMAL(11, 8) NULL DEFAULT NULL;
+
+ALTER TABLE eventos
+    MODIFY COLUMN latitude DECIMAL(10, 8) NULL DEFAULT NULL,
+    MODIFY COLUMN longitude DECIMAL(11, 8) NULL DEFAULT NULL;
+
+UPDATE estabelecimentos
+SET latitude = NULL, longitude = NULL
+WHERE latitude = -10.4431 AND longitude = -45.1611;
+
+UPDATE eventos
+SET latitude = NULL, longitude = NULL
+WHERE latitude = -10.4431 AND longitude = -45.1611;

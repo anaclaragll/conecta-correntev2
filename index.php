@@ -35,8 +35,16 @@ $eventos = $stmt_ev->fetchAll(PDO::FETCH_ASSOC);
 // Formata pontos do mapa Leaflet
 $pontos_mapa = [];
 foreach ($estabelecimentos as $est) {
-    $lat = !empty($est['latitude']) ? floatval($est['latitude']) : -10.4431;
-    $lng = !empty($est['longitude']) ? floatval($est['longitude']) : -45.1611;
+    if ($est['latitude'] === null || $est['longitude'] === null
+        || !is_numeric($est['latitude']) || !is_numeric($est['longitude'])) {
+        continue;
+    }
+
+    $lat = (float) $est['latitude'];
+    $lng = (float) $est['longitude'];
+    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+        continue;
+    }
     
     $pontos_mapa[] = [
         'id' => $est['id'],
@@ -138,8 +146,12 @@ foreach ($estabelecimentos as $est) {
           <div class="grid gap-4 md:grid-cols-2">
             <?php foreach ($estabelecimentos as $est): ?>
               <?php
-                $lat = !empty($est['latitude']) ? (float) $est['latitude'] : -10.4431;
-                $lng = !empty($est['longitude']) ? (float) $est['longitude'] : -45.1611;
+                $hasMapCoordinates = $est['latitude'] !== null && $est['longitude'] !== null
+                  && is_numeric($est['latitude']) && is_numeric($est['longitude'])
+                  && (float) $est['latitude'] >= -90 && (float) $est['latitude'] <= 90
+                  && (float) $est['longitude'] >= -180 && (float) $est['longitude'] <= 180;
+                $lat = $hasMapCoordinates ? (float) $est['latitude'] : null;
+                $lng = $hasMapCoordinates ? (float) $est['longitude'] : null;
                 $imagem = !empty($est['imagem_url']) ? $est['imagem_url'] : 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?auto=format&fit=crop&w=600&q=80';
               ?>
               <article class="overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:border-green-700 hover:shadow-sm">
@@ -153,7 +165,11 @@ foreach ($estabelecimentos as $est) {
                   </div>
                 </div>
                 <div class="flex gap-3 border-t border-gray-100 px-4 py-3">
-                  <button type="button" data-map-target="<?= (int) $est['id'] ?>" data-lat="<?= $lat ?>" data-lng="<?= $lng ?>" class="min-h-11 flex-1 rounded-lg border border-green-800 px-3 text-sm font-semibold text-green-900 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-700">Ver no mapa</button>
+                  <?php if ($hasMapCoordinates): ?>
+                    <button type="button" data-map-target="<?= (int) $est['id'] ?>" data-lat="<?= $lat ?>" data-lng="<?= $lng ?>" class="min-h-11 flex-1 rounded-lg border border-green-800 px-3 text-sm font-semibold text-green-900 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-700">Ver no mapa</button>
+                  <?php else: ?>
+                    <span class="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-gray-200 px-3 text-center text-sm text-gray-500">Localização não informada</span>
+                  <?php endif; ?>
                   <a href="detalhe.php?id=<?= (int) $est['id'] ?>" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-green-800 px-3 text-sm font-bold text-white hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2">Ver detalhes</a>
                 </div>
               </article>

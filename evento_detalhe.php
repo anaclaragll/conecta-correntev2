@@ -20,8 +20,12 @@ if (!$evento) {
 
 $galeria = galleryImagesFromStorage($evento['imagem_url'], $evento['galeria_fotos']);
 
-$lat = !empty($evento['latitude']) ? floatval($evento['latitude']) : -10.4431;
-$lng = !empty($evento['longitude']) ? floatval($evento['longitude']) : -45.1611;
+$hasCoordinates = $evento['latitude'] !== null && $evento['longitude'] !== null
+    && is_numeric($evento['latitude']) && is_numeric($evento['longitude'])
+    && (float) $evento['latitude'] >= -90 && (float) $evento['latitude'] <= 90
+    && (float) $evento['longitude'] >= -180 && (float) $evento['longitude'] <= 180;
+$lat = $hasCoordinates ? (float) $evento['latitude'] : -10.4401356;
+$lng = $hasCoordinates ? (float) $evento['longitude'] : -45.1627472;
 ?>
 <!doctype html>
 <html lang="pt-BR">
@@ -89,6 +93,9 @@ $lng = !empty($evento['longitude']) ? floatval($evento['longitude']) : -45.1611;
 
         <section aria-labelledby="mapa-evento-titulo">
           <h2 id="mapa-evento-titulo" class="mb-3 text-xl font-bold">Localização no mapa</h2>
+          <?php if (!$hasCoordinates): ?>
+            <p class="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">A localização exata deste evento ainda não foi informada.</p>
+          <?php endif; ?>
           <div id="mapa-evento" role="region" aria-label="Mapa com o local do evento" class="border border-gray-300 shadow-sm"></div>
         </section>
       </section>
@@ -99,27 +106,30 @@ $lng = !empty($evento['longitude']) ? floatval($evento['longitude']) : -45.1611;
   <script>
     const lat = <?= $lat ?>;
     const lng = <?= $lng ?>;
+    const hasCoordinates = <?= $hasCoordinates ? 'true' : 'false' ?>;
 
-    const map = L.map('mapa-evento').setView([lat, lng], 15);
+    const map = L.map('mapa-evento').setView([lat, lng], hasCoordinates ? 15 : 13);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    const popup = document.createElement('div');
-    const title = document.createElement('strong');
-    const place = document.createElement('p');
-    title.className = 'text-sm text-green-800';
-    title.textContent = <?= json_encode($evento['titulo'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
-    place.className = 'text-xs text-gray-600';
-    place.textContent = <?= json_encode($evento['local'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
-    popup.append(title, place);
+    if (hasCoordinates) {
+      const popup = document.createElement('div');
+      const title = document.createElement('strong');
+      const place = document.createElement('p');
+      title.className = 'text-sm text-green-800';
+      title.textContent = <?= json_encode($evento['titulo'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+      place.className = 'text-xs text-gray-600';
+      place.textContent = <?= json_encode($evento['local'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+      popup.append(title, place);
 
-    L.marker([lat, lng])
-      .addTo(map)
-      .bindPopup(popup)
-      .openPopup();
+      L.marker([lat, lng])
+        .addTo(map)
+        .bindPopup(popup)
+        .openPopup();
+    }
   </script>
 </body>
 </html>
